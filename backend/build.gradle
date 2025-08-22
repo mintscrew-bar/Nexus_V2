@@ -8,12 +8,22 @@ group = 'com.nexus'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    sourceCompatibility = '17'
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
+    }
+    
+    // 의존성 충돌 해결을 위한 설정
+    all {
+        resolutionStrategy {
+            force 'org.springframework.security:spring-security-core:6.1.5'
+            force 'org.springframework.security:spring-security-web:6.1.5'
+            force 'org.springframework.security:spring-security-config:6.1.5'
+        }
     }
 }
 
@@ -22,17 +32,20 @@ repositories {
 }
 
 dependencies {
-    // Spring Web, JPA, Security 등 기본 의존성
+    // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
-    // --- Keycloak 연동을 위한 의존성이 추가되었습니다 ---
-    // Spring Boot 애플리케이션을 OAuth2 리소스 서버로 기능하게 하여,
-    // Keycloak과 같은 외부 인증 서버에서 발급한 JWT 토큰을 검증할 수 있게 합니다.
+    // Security & OAuth2
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.security:spring-security-core:6.1.5'
+    implementation 'org.springframework.security:spring-security-web:6.1.5'
+    implementation 'org.springframework.security:spring-security-config:6.1.5'
+    implementation 'org.springframework.security:spring-security-oauth2-jose:6.1.5'
 
     // Database
     runtimeOnly 'org.postgresql:postgresql'
