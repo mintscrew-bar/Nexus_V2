@@ -37,7 +37,7 @@ services:
 
   # PostgreSQL 데이터베이스 서비스
   db:
-    image: postgres:15-alpine # 이미지를 postgres로 변경
+    image: postgres:15-alpine # 이미지를 postgres:15-alpine으로 변경
     container_name: nexus-db
     environment:
       # PostgreSQL에 맞는 환경변수 이름으로 변경
