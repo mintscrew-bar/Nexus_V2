@@ -1,0 +1,74 @@
+# .gitignore 파일
+# 이 파일은 프로젝트의 루트 디렉토리에 위치해야 합니다.
+
+### 환경변수 및 민감 정보 (Environment & Secrets) ###
+# 절대 Git에 올리면 안 되는 민감한 정보 파일들입니다.
+.env
+.env.*
+!.env.example
+application-*.properties
+!application-example.properties
+
+### 빌드 결과물 및 캐시 (Build & Cache) ###
+# (backend)
+backend/build/
+backend/.gradle/
+!backend/gradle/wrapper/gradle-wrapper.jar
+
+# (frontend)
+frontend/build/
+frontend/.next/
+frontend/node_modules/
+
+### IDE 및 에디터 설정 (IDE & Editor) ###
+# 각 개발 환경에 따라 자동으로 생성되는 설정 파일들입니다.
+# STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+### 운영체제 파일 (OS Specific) ###
+# Mac OS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+### 로그 및 임시 파일 (Logs & Temp) ###
+*.log
+logs/
+tmp/
+
+### Node.js 관련 ###
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+### 테스트 관련 (Testing) ###
+coverage/
+.nyc_output/
