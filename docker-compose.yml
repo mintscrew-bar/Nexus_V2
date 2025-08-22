@@ -1,5 +1,5 @@
 # docker-compose.yml
-# PostgreSQL을 사용하도록 수정되었습니다.
+# Keycloak 서비스가 추가되었습니다.
 
 version: '3.8'
 
@@ -12,6 +12,7 @@ services:
     container_name: nexus-backend
     depends_on:
       - db
+      - keycloak # Keycloak이 실행된 후에 백엔드가 시작되도록 의존성 추가
     ports:
       - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
     environment:
@@ -24,6 +25,8 @@ services:
       - JWT_EXPIRATION_MS=${JWT_EXPIRATION_MS}
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      # Keycloak 서버 주소를 환경변수로 추가
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/nexus
     restart: always
 
   # Next.js 프론트엔드 애플리케이션 서비스
@@ -37,17 +40,29 @@ services:
 
   # PostgreSQL 데이터베이스 서비스
   db:
-    image: postgres:15-alpine # 이미지를 postgres:15-alpine으로 변경
+    image: postgres:15-alpine
     container_name: nexus-db
     environment:
-      # PostgreSQL에 맞는 환경변수 이름으로 변경
       POSTGRES_DB: nexusdb
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - db_data:/var/lib/postgresql/data # PostgreSQL 데이터 저장 경로
+      - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432" # PostgreSQL 기본 포트
+      - "5432:5432"
+    restart: always
+
+  # --- Keycloak 서비스가 추가되었습니다 ---
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest # 공식 Keycloak 이미지 사용
+    container_name: nexus-keycloak
+    environment:
+      # .env 파일에서 Keycloak 관리자 계정 정보를 가져옵니다.
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    ports:
+      - "8180:8080" # 호스트의 8180 포트를 컨테이너의 8080 포트와 연결
+    command: start-dev # 개발 모드로 Keycloak 시작
     restart: always
 
 volumes:
