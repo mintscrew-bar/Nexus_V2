@@ -1,15 +1,23 @@
 package com.nexus.service;
 
 import com.nexus.dto.GameRoomDto;
+import com.nexus.dto.RiotApiDto;
+import com.nexus.entity.GameMatch;
 import com.nexus.entity.GameRoom;
 import com.nexus.entity.GameRoomParticipant;
+import com.nexus.entity.TeamCompositionMethod;
 import com.nexus.entity.User;
-import com.nexus.exception.UserNotFoundException; // 커스텀 예외를 import 합니다.
+import com.nexus.exception.RoomNotFoundException;
+import com.nexus.exception.UnauthorizedException;
+import com.nexus.exception.UserNotFoundException;
+import com.nexus.repository.GameMatchRepository; // 이제 이 import가 성공합니다.
 import com.nexus.repository.GameRoomRepository;
 import com.nexus.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono; // Mono와 Flux를 import 합니다.
 
 import java.util.List;
 import java.util.UUID;
@@ -21,49 +29,101 @@ import java.util.stream.Collectors;
 public class GameRoomService {
 
     private final GameRoomRepository gameRoomRepository;
+    private final GameMatchRepository gameMatchRepository; // GameMatchRepository를 주입받습니다.
     private final UserRepository userRepository;
+    private final RiotApiService riotApiService;
 
-    /**
-     * 새로운 게임 로비를 생성합니다.
-     */
     @Transactional
     public GameRoomDto.Response createGameRoom(GameRoomDto.CreateRequest request, String userEmail) {
-        // 1. 방장(User) 정보 조회 및 예외 처리
         User host = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserNotFoundException("이메일에 해당하는 사용자를 찾을 수 없습니다: " + userEmail));
 
-        // 2. GameRoom 엔티티 생성 및 정보 설정
         GameRoom gameRoom = new GameRoom();
         gameRoom.setTitle(request.getTitle());
         gameRoom.setMaxParticipants(request.getMaxParticipants());
         gameRoom.setHost(host);
         gameRoom.setRoomCode(generateUniqueRoomCode());
 
-        // 3. 방장을 첫 번째 참가자로 자동 추가
         GameRoomParticipant hostAsParticipant = new GameRoomParticipant();
         hostAsParticipant.setUser(host);
         hostAsParticipant.setGameRoom(gameRoom);
         gameRoom.getParticipants().add(hostAsParticipant);
 
-        // 4. DB에 저장
         GameRoom savedGameRoom = gameRoomRepository.save(gameRoom);
-        
-        // 5. DTO로 변환하여 반환
+
         return GameRoomDto.Response.fromEntity(savedGameRoom);
     }
-    
-    /**
-     * 현재 활성화된 모든 게임 로비 목록을 조회합니다.
-     */
+
     public List<GameRoomDto.Response> getAllGameRooms() {
         return gameRoomRepository.findAll().stream()
                 .map(GameRoomDto.Response::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * DB에서 중복을 확인하며 고유한 roomCode를 생성합니다.
-     */
+    @Transactional
+    public void startTeamComposition(String roomCode, GameRoomDto.StartTeamCompositionRequest request, String userEmail) {
+        GameRoom gameRoom = gameRoomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new RoomNotFoundException("해당 코드를 가진 방을 찾을 수 없습니다: " + roomCode));
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+
+        if (!gameRoom.getHost().equals(user)) {
+            throw new UnauthorizedException("방장만이 팀 구성을 시작할 수 있습니다.");
+        }
+        
+        if (!"WAITING".equals(gameRoom.getStatus())) {
+            throw new IllegalStateException("참가자 모집 중에만 팀 구성을 시작할 수 있습니다.");
+        }
+
+        gameRoom.setTeamCompositionMethod(request.getMethod());
+        
+        if (request.getMethod() == TeamCompositionMethod.AUCTION) {
+            gameRoom.setStatus("AUCTION_IN_PROGRESS");
+        } else {
+            gameRoom.setStatus("AUTO_TEAM_COMPOSITION");
+        }
+
+        gameRoomRepository.save(gameRoom);
+    }
+
+    @Transactional
+    public Mono<Void> startMatches(String roomCode, String userEmail) {
+        GameRoom gameRoom = gameRoomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new RoomNotFoundException("해당 코드를 가진 방을 찾을 수 없습니다: " + roomCode));
+        
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+
+        if (!gameRoom.getHost().equals(user)) {
+            throw new UnauthorizedException("방장만이 게임을 시작할 수 있습니다.");
+        }
+
+        int numberOfMatches = gameRoom.getMaxParticipants() / 10;
+        
+        RiotApiDto.TournamentCodeRequest tournamentRequest = new RiotApiDto.TournamentCodeRequest();
+        tournamentRequest.setMapType("SUMMONERS_RIFT");
+        tournamentRequest.setPickType("TOURNAMENT_DRAFT");
+        tournamentRequest.setSpectatorType("ALL");
+        tournamentRequest.setTeamSize(5);
+
+        return Flux.range(0, numberOfMatches)
+                .flatMap(i -> riotApiService.createStubTournamentCodes(tournamentRequest, 1L))
+                .flatMap(codes -> {
+                    String tournamentCode = codes.get(0);
+                    GameMatch match = new GameMatch();
+                    match.setGameRoom(gameRoom);
+                    match.setTournamentCode(tournamentCode);
+                    match.setStatus("PENDING");
+                    gameMatchRepository.save(match);
+                    return Mono.empty();
+                })
+                .then(Mono.fromRunnable(() -> {
+                    gameRoom.setStatus("IN_PROGRESS");
+                    gameRoomRepository.save(gameRoom);
+                }));
+    }
+
     private String generateUniqueRoomCode() {
         String roomCode;
         do {

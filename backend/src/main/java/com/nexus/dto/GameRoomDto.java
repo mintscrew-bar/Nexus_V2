@@ -2,12 +2,14 @@ package com.nexus.dto;
 
 import com.nexus.entity.GameRoom;
 import com.nexus.entity.GameRoomParticipant;
+import com.nexus.entity.TeamCompositionMethod;
 import com.nexus.entity.User;
 import com.nexus.validation.MultipleOfFive;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -79,5 +81,11 @@ public class GameRoomDto {
             dto.setTeamNumber(participant.getTeamNumber());
             return dto;
         }
+    }
+    @Getter
+    @Setter
+    public static class StartTeamCompositionRequest {
+        @NotNull(message = "팀 구성 방식을 선택해야 합니다.")
+        private TeamCompositionMethod method;
     }
 }

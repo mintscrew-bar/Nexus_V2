@@ -18,7 +18,7 @@ public class GameRoom {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    // 방 코드는 랜덤으로 생성되어야 함
+    // 방 코드는 랜덤으로 생성
     @Column(unique = true, nullable = false)
     private String roomCode;
 
@@ -36,7 +36,12 @@ public class GameRoom {
     private User host;
 
     // 방 상태
+    @Column(nullable = false)
     private String status = "WAITING";
+
+    // 팀 구성 방식
+    @Enumerated(EnumType.STRING)
+    private TeamCompositionMethod teamCompositionMethod;
 
     // 방 생성 시간
     @CreationTimestamp
