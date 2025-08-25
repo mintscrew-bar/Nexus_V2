@@ -20,4 +20,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return Optional<User>
      */
     Optional<User> findByKeycloakId(String keycloakId);
+    Optional<User> findByEmail(String email);
+    Optional<User> findByUserCode(String userCode); 
 }

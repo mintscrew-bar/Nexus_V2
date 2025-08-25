@@ -8,41 +8,51 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users") // 데이터베이스 테이블 이름을 'users'로 지정
+@Table(name = "users")
 @Getter
 @Setter
 public class User {
 
+    // ... 기존 id, keycloakId, userCode, email, nickname 등 필드 ...
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // --- 아래 필드가 Keycloak 연동을 위해 추가/수정되었습니다 ---
     @Column(unique = true, nullable = false)
-    private String keycloakId;   // Keycloak 사용자의 고유 ID (UUID)
+    private String keycloakId;
+
+    @Column(unique = true)
+    private String userCode;
 
     @Column(unique = true, nullable = false)
     private String email;
 
-    // 'password' 필드는 Keycloak이 관리하므로 제거되었습니다.
-
     @Column(unique = true, nullable = false)
     private String nickname;
 
-    // --- 아래는 애플리케이션 고유 정보입니다 ---
-    private String summonerName; // 소환사 이름
-    private String riotId;       // Riot ID (태그라인 포함)
+    private String summonerName;
+    private String riotId;
 
-    @Column(unique = true, nullable = false)
-    private String puuid;        // Riot API에서 사용하는 영구적인 고유 식별자
+    @Column(unique = true)
+    private String puuid;
 
-    private int profileIconId;   // 소환사 아이콘 ID
-    private long summonerLevel;  // 소환사 레벨
-    private String avatarUrl;    // OAuth 또는 자체 업로드 프로필 이미지 URL
+    private int profileIconId;
+    private long summonerLevel;
+    private String avatarUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;           // 사용자의 권한 (USER, ADMIN 등)
+    private Role role;
+
+    // --- 랭크 정보 필드 (새로 추가) ---
+    private String soloTier;      // 예: "GOLD", "DIAMOND"
+    private String soloRank;      // 예: "I", "II", "III", "IV"
+    private int soloLeaguePoints; // 0-100 LP
+
+    private String flexTier;
+    private String flexRank;
+    private int flexLeaguePoints;
+    // --- 여기까지 ---
 
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
