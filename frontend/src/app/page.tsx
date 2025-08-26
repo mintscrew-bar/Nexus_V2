@@ -1,72 +1,39 @@
 'use client'; // 이 컴포넌트가 클라이언트 측에서 실행되도록 설정합니다.
 
-import { useState, useEffect, useRef } from 'react';
-import Keycloak from 'keycloak-js';
-
-// Keycloak 인스턴스를 저장할 변수
-let keycloakInstance: Keycloak | null = null;
+import { useEffect } from 'react';
+import Link from 'next/link'; // Next.js의 페이지 이동을 위한 Link 컴포넌트
+import { useAuthStore } from '@/stores/authStore'; // 절대 경로를 사용하여 authStore를 가져옵니다.
 
 export default function Home() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
-  const isRun = useRef(false); // useEffect가 두 번 실행되는 것을 방지합니다.
+  // authStore에서 필요한 상태와 함수들을 직접 가져옵니다.
+  const { isAuthenticated, username, initialize, login } = useAuthStore();
 
+  // 앱이 처음 실행될 때 한 번만 Keycloak 초기화 함수를 호출합니다.
   useEffect(() => {
-    // Strict Mode에서 컴포넌트가 두 번 렌더링될 때, Keycloak 초기화가 한 번만 실행되도록 합니다.
-    if (isRun.current) return;
-    isRun.current = true;
-
-    // Keycloak 인스턴스를 생성하고 설정합니다.
-    const keycloak: Keycloak = new Keycloak({
-      url: 'http://localhost:8180', // Docker Compose에서 설정한 Keycloak 주소
-      realm: 'nexus',               // 우리가 생성한 Realm 이름
-      clientId: 'nexus-frontend',   // 우리가 생성한 Client ID
-    });
-
-    keycloakInstance = keycloak;
-
-    // Keycloak을 초기화합니다.
-    keycloak.init({ onLoad: 'check-sso' })
-      .then(authenticated => {
-        setIsAuthenticated(authenticated);
-        if (authenticated && keycloak.tokenParsed) {
-          // 'preferred_username'은 Keycloak에서 기본으로 제공하는 사용자 이름입니다.
-          setUsername(keycloak.tokenParsed.preferred_username || 'Unknown User');
-        }
-      })
-      .catch(error => {
-        console.error("Keycloak 초기화 실패", error);
-        setIsAuthenticated(false);
-      });
-
-  }, []); // 빈 배열을 전달하여 컴포넌트가 처음 마운트될 때 한 번만 실행되도록 합니다.
-
-  const handleLogin = () => {
-    keycloakInstance?.login();
-  };
-
-  const handleLogout = () => {
-    keycloakInstance?.logout();
-  };
+    initialize();
+  }, [initialize]);
 
   return (
-    <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <h1>Nexus Project</h1>
-      {isAuthenticated ? (
-        <div>
-          <p>환영합니다, {username}!</p>
-          <button onClick={handleLogout} style={{ padding: '10px 20px', cursor: 'pointer' }}>
-            Logout
-          </button>
-        </div>
-      ) : (
-        <div>
-          <p>로그인이 필요합니다.</p>
-          <button onClick={handleLogin} style={{ padding: '10px 20px', cursor: 'pointer' }}>
-            Login
-          </button>
-        </div>
-      )}
+    <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', textAlign: 'center' }}>
+      <h1>Nexus에 오신 것을 환영합니다!</h1>
+      <p>리그 오브 레전드 내전 플랫폼</p>
+      <div style={{ marginTop: '20px' }}>
+        {isAuthenticated ? (
+          <div>
+            <p>환영합니다, {username}!</p>
+            <Link href="/lobbies" style={{ display: 'inline-block', padding: '10px 20px', marginTop: '10px', backgroundColor: '#0070f3', color: 'white', textDecoration: 'none', borderRadius: '5px' }}>
+              로비로 이동하기
+            </Link>
+          </div>
+        ) : (
+          <div>
+            <p>서비스를 이용하려면 로그인이 필요합니다.</p>
+            <button onClick={login} style={{ padding: '10px 20px', cursor: 'pointer', fontSize: '16px' }}>
+              Login
+            </button>
+          </div>
+        )}
+      </div>
     </main>
   );
 }

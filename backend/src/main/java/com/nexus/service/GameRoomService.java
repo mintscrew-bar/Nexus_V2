@@ -107,16 +107,23 @@ public class GameRoomService {
         tournamentRequest.setSpectatorType("ALL");
         tournamentRequest.setTeamSize(5);
 
-        return Flux.range(0, numberOfMatches)
-                .flatMap(i -> riotApiService.createStubTournamentCodes(tournamentRequest, 1L))
-                .flatMap(codes -> {
-                    String tournamentCode = codes.get(0);
-                    GameMatch match = new GameMatch();
-                    match.setGameRoom(gameRoom);
-                    match.setTournamentCode(tournamentCode);
-                    match.setStatus("PENDING");
-                    gameMatchRepository.save(match);
-                    return Mono.empty();
+        // 1. Stub Provider 등록 -> 2. Stub Tournament 등록 -> 3. Tournament Code 생성
+        return riotApiService.createProvider("http://localhost:8080/api/callback") // 콜백 URL은 실제 동작하지 않아도 괜찮습니다.
+                .flatMap(providerId -> riotApiService.createTournament(providerId, gameRoom.getTitle()))
+                .flatMap(tournamentId -> {
+                    // 3. 생성된 tournamentId를 사용하여 토너먼트 코드 생성
+                    return Flux.range(0, numberOfMatches)
+                            .flatMap(i -> riotApiService.createTournamentCodes(tournamentRequest, tournamentId)) // 하드코딩된 1L 대신 동적으로 받은 tournamentId 사용
+                            .flatMap(codes -> {
+                                String tournamentCode = codes.get(0);
+                                GameMatch match = new GameMatch();
+                                match.setGameRoom(gameRoom);
+                                match.setTournamentCode(tournamentCode);
+                                match.setStatus("PENDING");
+                                gameMatchRepository.save(match);
+                                return Mono.empty();
+                            })
+                            .then();
                 })
                 .then(Mono.fromRunnable(() -> {
                     gameRoom.setStatus("IN_PROGRESS");
