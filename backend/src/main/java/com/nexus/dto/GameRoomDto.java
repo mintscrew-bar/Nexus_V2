@@ -1,6 +1,5 @@
 package com.nexus.dto;
 
-import com.nexus.entity.GameRoom;
 import com.nexus.entity.GameRoomParticipant;
 import com.nexus.entity.TeamCompositionMethod;
 import com.nexus.entity.User;
@@ -46,23 +45,7 @@ public class GameRoomDto {
         private String status;
         private LocalDateTime createdAt;
         private List<ParticipantDto> participants;
-
-        public static Response fromEntity(GameRoom gameRoom) {
-            Response dto = new Response();
-            dto.setRoomCode(gameRoom.getRoomCode());
-            dto.setTitle(gameRoom.getTitle());
-            dto.setMaxParticipants(gameRoom.getMaxParticipants());
-            dto.setCurrentParticipants(gameRoom.getParticipants().size());
-            User host = gameRoom.getHost();
-            dto.setHostName(host != null ? host.getNickname() : "알 수 없음");
-            dto.setStatus(gameRoom.getStatus());
-            dto.setCreatedAt(gameRoom.getCreatedAt());
-            dto.setParticipants(gameRoom.getParticipants().stream()
-                    .map(ParticipantDto::fromEntity)
-                    .collect(Collectors.toList()));
-            return dto;
         }
-    }
 
     @Getter
     @Setter

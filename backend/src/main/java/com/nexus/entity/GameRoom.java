@@ -18,6 +18,7 @@ public class GameRoom {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
     // 방 코드는 랜덤으로 생성
     @Column(unique = true, nullable = false)
     private String roomCode;
@@ -36,8 +37,9 @@ public class GameRoom {
     private User host;
 
     // 방 상태
+    @Enumerated(EnumType.STRING) // Enum 타입을 DB에 문자열로 저장
     @Column(nullable = false)
-    private String status = "WAITING";
+    private GameRoomStatus status = GameRoomStatus.WAITING;
 
     // 팀 구성 방식
     @Enumerated(EnumType.STRING)

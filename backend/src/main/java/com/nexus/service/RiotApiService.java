@@ -1,5 +1,6 @@
 package com.nexus.service;
 
+import com.nexus.config.RiotApiProperties;
 import com.nexus.dto.RiotApiDto.ProviderRegistrationRequest;
 import com.nexus.dto.RiotApiDto.TournamentCodeRequest;
 import com.nexus.dto.RiotApiDto.TournamentRegistrationRequest;
@@ -15,26 +16,20 @@ import java.util.List;
 public class RiotApiService {
 
     private final WebClient webClient;
-    
-    // 개발 단계에서는 true로 설정하여 stub 경로를 사용합니다.
-    private final boolean useStubApi = true; 
+    private final RiotApiProperties riotApiProperties;
 
-    public RiotApiService(WebClient.Builder webClientBuilder, @Value("${RIOT_API_KEY}") String riotApiKey) {
+    public RiotApiService(WebClient.Builder webClientBuilder, @Value("${RIOT_API_KEY}") String riotApiKey, RiotApiProperties riotApiProperties) {
         this.webClient = webClientBuilder
                 .baseUrl("https://americas.api.riotgames.com")
                 .defaultHeader("X-Riot-Token", riotApiKey)
                 .build();
+        this.riotApiProperties = riotApiProperties;
     }
 
-    /**
-     * 토너먼트 Provider를 등록합니다.
-     * @param callbackUrl 콜백을 받을 URL
-     * @return 생성된 Provider ID (Mono<Long>)
-     */
-    public Mono<Long> createProvider(String callbackUrl) {
-        ProviderRegistrationRequest request = new ProviderRegistrationRequest(callbackUrl);
+    public Mono<Long> createProvider() {
+        ProviderRegistrationRequest request = new ProviderRegistrationRequest(riotApiProperties.getCallbackUrl());
         // useStubApi 값에 따라 동적으로 경로를 결정합니다.
-        String path = useStubApi ? "/lol/tournament-stub/v5/providers" : "/lol/tournament/v5/providers";
+        String path = riotApiProperties.isUseStub() ? "/lol/tournament-stub/v5/providers" : "/lol/tournament/v5/providers";
         
         return this.webClient.post()
                 .uri(path)
@@ -52,7 +47,7 @@ public class RiotApiService {
     public Mono<Long> createTournament(long providerId, String tournamentName) {
         TournamentRegistrationRequest request = new TournamentRegistrationRequest(tournamentName, providerId);
         // useStubApi 값에 따라 동적으로 경로를 결정합니다.
-        String path = useStubApi ? "/lol/tournament-stub/v5/tournaments" : "/lol/tournament/v5/tournaments";
+        String path = riotApiProperties.isUseStub() ? "/lol/tournament-stub/v5/tournaments" : "/lol/tournament/v5/tournaments";
 
         return this.webClient.post()
                 .uri(path)
@@ -69,7 +64,7 @@ public class RiotApiService {
      */
     public Mono<List<String>> createTournamentCodes(TournamentCodeRequest request, long tournamentId) {
         // useStubApi 값에 따라 동적으로 경로를 결정합니다.
-        String path = useStubApi ? "/lol/tournament-stub/v5/codes" : "/lol/tournament/v5/codes";
+        String path = riotApiProperties.isUseStub() ? "/lol/tournament-stub/v5/codes" : "/lol/tournament/v5/codes";
 
         return this.webClient.post()
                 .uri(uriBuilder -> uriBuilder
