@@ -23,8 +23,7 @@ public class GameRoomMapper {
         dto.setCurrentParticipants(gameRoom.getParticipants().size());
         User host = gameRoom.getHost();
         dto.setHostName(host != null ? host.getNickname() : "알 수 없음");
-        
-        // No change needed here, this is now correct
+
         dto.setStatus(gameRoom.getStatus().name()); // Enum to String
         
         dto.setCreatedAt(gameRoom.getCreatedAt());
