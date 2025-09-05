@@ -69,11 +69,12 @@ public class RiotApiService {
         return this.webClient.post()
                 .uri(uriBuilder -> uriBuilder
                         .path(path)
-                        .queryParam("count", 1) 
+                        .queryParam("count", 1)
                         .queryParam("tournamentId", tournamentId)
                         .build())
                 .bodyValue(request)
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<List<String>>() {});
+                .bodyToMono(new ParameterizedTypeReference<>() {
+                });
     }
 }

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +42,7 @@ public class GameRoomService {
         gameRoom.setMaxParticipants(request.getMaxParticipants());
         gameRoom.setHost(host);
         gameRoom.setRoomCode(generateUniqueRoomCode());
+        gameRoom.setStatus(GameRoomStatus.WAITING); // 초기 상태 설정
 
         GameRoomParticipant hostAsParticipant = new GameRoomParticipant();
         hostAsParticipant.setUser(host);
@@ -59,6 +61,33 @@ public class GameRoomService {
     }
 
     @Transactional
+    public GameRoomDto.Response joinGameRoom(String roomCode, String userEmail) {
+        GameRoom gameRoom = gameRoomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new RoomNotFoundException("해당 코드를 가진 방을 찾을 수 없습니다: " + roomCode));
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다: " + userEmail));
+
+        if (gameRoom.getParticipants().size() >= gameRoom.getMaxParticipants()) {
+            throw new IllegalStateException("방이 가득 찼습니다.");
+        }
+
+        boolean isAlreadyParticipant = gameRoom.getParticipants().stream()
+                .anyMatch(p -> p.getUser().equals(user));
+        if (isAlreadyParticipant) {
+            throw new IllegalStateException("이미 이 방에 참가하고 있습니다.");
+        }
+
+        GameRoomParticipant newParticipant = new GameRoomParticipant();
+        newParticipant.setUser(user);
+        newParticipant.setGameRoom(gameRoom);
+        gameRoom.getParticipants().add(newParticipant);
+
+        GameRoom savedGameRoom = gameRoomRepository.save(gameRoom);
+        return gameRoomMapper.toResponseDto(savedGameRoom);
+    }
+
+    @Transactional
     public void startTeamComposition(String roomCode, GameRoomDto.StartTeamCompositionRequest request, String userEmail) {
         GameRoom gameRoom = gameRoomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new RoomNotFoundException("해당 코드를 가진 방을 찾을 수 없습니다: " + roomCode));
@@ -69,13 +98,13 @@ public class GameRoomService {
         if (!gameRoom.getHost().equals(user)) {
             throw new UnauthorizedException("방장만이 팀 구성을 시작할 수 있습니다.");
         }
-        
+
         if (gameRoom.getStatus() != GameRoomStatus.WAITING) {
             throw new IllegalStateException("참가자 모집 중에만 팀 구성을 시작할 수 있습니다.");
         }
 
         gameRoom.setTeamCompositionMethod(request.getMethod());
-        
+
         if (request.getMethod() == TeamCompositionMethod.AUCTION) {
             gameRoom.setStatus(GameRoomStatus.AUCTION_IN_PROGRESS);
         } else {
@@ -87,44 +116,61 @@ public class GameRoomService {
 
     @Transactional
     public Mono<Void> startMatches(String roomCode, String userEmail) {
-        GameRoom gameRoom = gameRoomRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new RoomNotFoundException("해당 코드를 가진 방을 찾을 수 없습니다: " + roomCode));
-        
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+        // 블로킹 DB 조회를 별도 스레드에서 실행하여 리액티브 스레드를 방해하지 않도록 함
+        Mono<GameRoom> gameRoomMono = Mono.fromCallable(() ->
+                gameRoomRepository.findByRoomCode(roomCode)
+                        .orElseThrow(() -> new RoomNotFoundException("해당 코드를 가진 방을 찾을 수 없습니다: " + roomCode))
+        ).subscribeOn(Schedulers.boundedElastic());
 
-        if (!gameRoom.getHost().equals(user)) {
-            throw new UnauthorizedException("방장만이 게임을 시작할 수 있습니다.");
-        }
+        Mono<User> userMono = Mono.fromCallable(() ->
+                userRepository.findByEmail(userEmail)
+                        .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."))
+        ).subscribeOn(Schedulers.boundedElastic());
 
-        int numberOfMatches = gameRoom.getMaxParticipants() / 10;
-        
-        RiotApiDto.TournamentCodeRequest tournamentRequest = new RiotApiDto.TournamentCodeRequest();
-        tournamentRequest.setMapType("SUMMONERS_RIFT");
-        tournamentRequest.setPickType("TOURNAMENT_DRAFT");
-        tournamentRequest.setSpectatorType("ALL");
-        tournamentRequest.setTeamSize(5);
+        return gameRoomMono.zipWith(userMono)
+                .flatMap(tuple -> {
+                    GameRoom gameRoom = tuple.getT1();
+                    User user = tuple.getT2();
 
-        return riotApiService.createProvider()
-                .flatMap(providerId -> riotApiService.createTournament(providerId, gameRoom.getTitle()))
-                .flatMap(tournamentId -> {
-                    return Flux.range(0, numberOfMatches)
-                            .flatMap(i -> riotApiService.createTournamentCodes(tournamentRequest, tournamentId))
-                            .flatMap(codes -> {
-                                String tournamentCode = codes.get(0);
-                                GameMatch match = new GameMatch();
-                                match.setGameRoom(gameRoom);
-                                match.setTournamentCode(tournamentCode);
-                                match.setStatus("PENDING");
-                                gameMatchRepository.save(match);
-                                return Mono.empty();
-                            })
-                            .then();
+                    if (!gameRoom.getHost().equals(user)) {
+                        return Mono.error(new UnauthorizedException("방장만이 게임을 시작할 수 있습니다."));
+                    }
+
+                    // 실제 참가자 기준으로 10의 배수인지 확인
+                    int currentParticipants = gameRoom.getParticipants().size();
+                    if (currentParticipants == 0 || currentParticipants % 10 != 0) {
+                        return Mono.error(new IllegalStateException("참가자 수는 10의 배수여야 게임을 시작할 수 있습니다. 현재 참가자: " + currentParticipants));
+                    }
+
+                    int numberOfMatches = currentParticipants / 10;
+
+                    RiotApiDto.TournamentCodeRequest tournamentRequest = new RiotApiDto.TournamentCodeRequest();
+                    tournamentRequest.setMapType("SUMMONERS_RIFT");
+                    tournamentRequest.setPickType("TOURNAMENT_DRAFT");
+                    tournamentRequest.setSpectatorType("ALL");
+                    tournamentRequest.setTeamSize(5);
+
+                    return riotApiService.createProvider()
+                            .flatMap(providerId -> riotApiService.createTournament(providerId, gameRoom.getTitle()))
+                            .flatMap(tournamentId ->
+                                    Flux.range(0, numberOfMatches)
+                                            .flatMap(i -> riotApiService.createTournamentCodes(tournamentRequest, tournamentId))
+                                            .flatMap(codes -> Mono.fromRunnable(() -> {
+                                                String tournamentCode = codes.get(0);
+                                                GameMatch match = new GameMatch();
+                                                match.setGameRoom(gameRoom);
+                                                match.setTournamentCode(tournamentCode);
+                                                match.setStatus("PENDING");
+                                                gameMatchRepository.save(match);
+                                            }).subscribeOn(Schedulers.boundedElastic()))
+                                            .then()
+                            )
+                            .then(Mono.fromRunnable(() -> {
+                                gameRoom.setStatus(GameRoomStatus.IN_PROGRESS);
+                                gameRoomRepository.save(gameRoom);
+                            }).subscribeOn(Schedulers.boundedElastic()));
                 })
-                .then(Mono.fromRunnable(() -> {
-                    gameRoom.setStatus(GameRoomStatus.IN_PROGRESS);
-                    gameRoomRepository.save(gameRoom);
-                }));
+                .then();
     }
 
     private String generateUniqueRoomCode() {

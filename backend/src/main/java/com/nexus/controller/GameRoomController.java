@@ -58,5 +58,12 @@ public class GameRoomController {
         gameRoomService.startTeamComposition(roomCode, request, userEmail);
         return ResponseEntity.ok().build();
     }
-
+    @PostMapping("/{roomCode}/join")
+    public ResponseEntity<Void> joinGameRoom(
+            @PathVariable String roomCode,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userEmail = jwt.getClaimAsString("email");
+        gameRoomService.joinGameRoom(roomCode, userEmail);
+        return ResponseEntity.ok().build();
+    }
 }

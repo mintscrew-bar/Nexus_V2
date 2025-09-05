@@ -12,8 +12,12 @@ import java.util.Optional;
 @Service
 public class UserService {
 
+    private final UserRepository userRepository;
+
     @Autowired
-    private UserRepository userRepository;
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     /**
      * Keycloak으로부터 받은 사용자 정보로 우리 DB의 사용자를 찾거나 새로 생성합니다.
