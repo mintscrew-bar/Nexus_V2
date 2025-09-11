@@ -1,0 +1,209 @@
+/* ================================== */
+/* Sass Variables (고정 색상 값 정의) */
+/* ================================== */
+
+// 1. Brand Colors (아이콘 기반)
+$brand-purple: #6A00FF;
+$brand-blue: #0070F3;
+// 다크 모드에 어울리도록 채도를 낮춘 브랜드 컬러
+$brand-purple-dark-mode: #5200C7;
+$brand-blue-dark-mode: #005BC0;
+// 호버/액티브 시 사용 (기존보다 조금 더 진하거나 밝은 톤)
+$brand-mid-purple-hover: #4B009E;
+$brand-mid-blue-hover: #00479A;
+
+// 2. Semantic Colors (상태 색상)
+$color-success: #28a745;
+$color-warning: #ffc107;
+$color-danger: #dc3545;
+$color-info: #17a2b8;
+
+// 3. Dark Theme Palette (조금 더 은은하게 조정)
+$dark-bg-primary: #0f0f0f;    // 배경 (기존보다 살짝 밝게)
+$dark-bg-secondary: #1a1a1a;  // 카드, 사이드바 (기존보다 살짝 밝게)
+$dark-bg-tertiary: #252525;   // 살짝 더 밝은 배경 (새로운 레이어)
+
+$dark-text-primary: #e0e0e0;  // 본문 (기존보다 살짝 연하게)
+$dark-text-secondary: #b0b0b0; // 부가 설명 (기존보다 연하게)
+$dark-text-disabled: #6a6a6a;  // 비활성화 (더 은은하게)
+
+$dark-border-primary: #383838;  // 기본 경계선 (기존보다 연하게)
+$dark-border-secondary: #505050; // 연한 경계선 (더 연하게)
+
+// 4. Light Theme Palette (조금 더 은은하게 조정)
+$light-bg-primary: #f8f9fa;   // 배경 (더 밝게)
+$light-bg-secondary: #ffffff; // 카드, 사이드바
+$light-bg-tertiary: #e9ecef;  // 살짝 어두운 배경
+
+$light-text-primary: #343a40;  // 본문 (더 진하게)
+$light-text-secondary: #6c757d; // 부가 설명 (더 연하게)
+$light-text-disabled: #adb5bd;  // 비활성화 (더 연하게)
+
+$light-border-primary: #dee2e6; // 기본 경계선 (더 연하게)
+$light-border-secondary: #e9ecef; // 연한 경계선 (더 연하게)
+
+/* ============================================= */
+/* CSS Custom Properties for Dynamic Theming     */
+/* ============================================= */
+:root {
+  // 기본 테마를 다크 모드로 설정
+  --theme-bg-primary: #{$dark-bg-primary};
+  --theme-bg-secondary: #{$dark-bg-secondary};
+  --theme-bg-tertiary: #{$dark-bg-tertiary};
+
+  --theme-text-primary: #{$dark-text-primary};
+  --theme-text-secondary: #{$dark-text-secondary};
+  --theme-text-disabled: #{$dark-text-disabled};
+
+  --theme-border-primary: #{$dark-border-primary};
+  --theme-border-secondary: #{$dark-border-secondary};
+
+  --theme-brand-primary: #{$brand-purple-dark-mode}; // 다크 모드 브랜드 컬러 적용
+  --theme-brand-secondary: #{$brand-blue-dark-mode}; // 다크 모드 브랜드 컬러 적용
+  --theme-brand-gradient: linear-gradient(to right, #{$brand-purple-dark-mode}, #{$brand-blue-dark-mode});
+  --theme-brand-hover: #{$brand-mid-purple-hover}; // 다크 모드 호버 컬러
+
+  --theme-success: #{$color-success};
+  --theme-warning: #{$color-warning};
+  --theme-danger: #{$color-danger};
+  --theme-info: #{$color-info};
+
+  // 버튼 반짝임 효과를 위한 변수
+  --button-glow-color: rgba(106, 0, 255, 0.5); // 브랜드 퍼플 기반의 투명한 색상
+
+  // 라이트 모드일 때 덮어 쓸 변수
+  &[data-theme="light"] {
+    --theme-bg-primary: #{$light-bg-primary};
+    --theme-bg-secondary: #{$light-bg-secondary};
+    --theme-bg-tertiary: #{$light-bg-tertiary};
+
+    --theme-text-primary: #{$light-text-primary};
+    --theme-text-secondary: #{$light-text-secondary};
+    --theme-text-disabled: #{$light-text-disabled};
+
+    --theme-border-primary: #{$light-border-primary};
+    --theme-border-secondary: #{$light-border-secondary};
+
+    --theme-brand-primary: #{$brand-purple};      // 라이트 모드는 원본 브랜드 컬러
+    --theme-brand-secondary: #{$brand-blue};
+    --theme-brand-hover: #{$brand-mid-blue-hover}; // 라이트 모드 호버 컬러
+
+    --button-glow-color: rgba(0, 112, 243, 0.4); // 브랜드 블루 기반의 투명한 색상
+  }
+}
+
+/* ================================== */
+/* Layout                             */
+/* ================================== */
+$sidebar-width: 240px;
+$header-height: 60px;
+$container-padding: 2rem;
+
+/* ================================== */
+/* Base & Global Styles              */
+/* ================================== */
+body {
+  color: var(--theme-text-primary);
+  background: var(--theme-bg-primary);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ================================== */
+/* Main App Layout                    */
+/* ================================== */
+.appLayout {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: $sidebar-width;
+  background-color: var(--theme-bg-secondary);
+  border-right: 1px solid var(--theme-border-primary);
+  padding: $container-padding;
+  overflow-y: auto;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+.contentWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.header {
+  height: $header-height;
+  border-bottom: 1px solid var(--theme-border-primary);
+  padding: 0 $container-padding;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--theme-bg-secondary);
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+.mainContent {
+  padding: $container-padding;
+  flex: 1;
+  background-color: var(--theme-bg-primary);
+  transition: background-color 0.2s ease-in-out;
+}
+
+/* ================================== */
+/* Mixins & Utility Classes           */
+/* ================================== */
+// 버튼 공통 스타일 믹스인 (추후 Button 컴포넌트에 적용)
+@mixin primary-button {
+  background-color: var(--theme-brand-primary);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  position: relative; // 반짝임 효과를 위해
+  overflow: hidden; // 반짝임 효과가 버튼 밖으로 나가지 않도록
+  z-index: 1;
+  transition: background-color 0.2s ease-in-out;
+
+  &:hover {
+    background-color: var(--theme-brand-hover); // 호버 시 색상 변경
+    // 반짝임 효과
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+                      90deg,
+                      transparent,
+                      var(--button-glow-color),
+                      transparent
+      );
+      transition: left 0.5s ease-in-out;
+    }
+  }
+
+  &:hover::after {
+    left: 100%; // 호버 시 왼쪽에서 오른쪽으로 이동
+  }
+}

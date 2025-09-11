@@ -10,22 +10,27 @@ import com.nexus.mapper.GameRoomMapper;
 import com.nexus.repository.GameMatchRepository;
 import com.nexus.repository.GameRoomRepository;
 import com.nexus.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class GameRoomService {
 
+    private final SimpMessagingTemplate messagingTemplate;
     private final GameRoomRepository gameRoomRepository;
     private final GameMatchRepository gameMatchRepository;
     private final UserRepository userRepository;
@@ -84,7 +89,11 @@ public class GameRoomService {
         gameRoom.getParticipants().add(newParticipant);
 
         GameRoom savedGameRoom = gameRoomRepository.save(gameRoom);
-        return gameRoomMapper.toResponseDto(savedGameRoom);
+        GameRoomDto.Response responseDto = gameRoomMapper.toResponseDto(savedGameRoom);
+
+        messagingTemplate.convertAndSend("/topic/gameRoom", responseDto);
+
+        return responseDto;
     }
 
     @Transactional
@@ -105,9 +114,26 @@ public class GameRoomService {
 
         gameRoom.setTeamCompositionMethod(request.getMethod());
 
-        if (request.getMethod() == TeamCompositionMethod.AUCTION) {
-            gameRoom.setStatus(GameRoomStatus.AUCTION_IN_PROGRESS);
-        } else {
+        if (request.getMethod() == TeamCompositionMethod.AUTO) {
+            List<GameRoomParticipant> participants = gameRoom.getParticipants();
+
+            if (participants.size() % 2 != 0) {
+                throw new IllegalStateException("팀을  나누기 위한 참가자 수가 홀수입니다.");
+            }
+
+            Collections.shuffle(participants);
+
+            int halfSize = participants.size() / 2;
+            for (int i = 0; i < participants.size(); i++) {
+                GameRoomParticipant participant = participants.get(i);
+                if (i < halfSize) {
+                    participant.setTeamNumber(1);
+                } else {
+                    participant.setTeamNumber(2);
+                }
+            }
+            gameRoom.setStatus(GameRoomStatus.AUTO_TEAM_COMPOSITION);
+        }else if (request.getMethod() == TeamCompositionMethod.AUCTION) {
             gameRoom.setStatus(GameRoomStatus.AUTO_TEAM_COMPOSITION);
         }
 
