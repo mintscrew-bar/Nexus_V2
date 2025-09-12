@@ -1,0 +1,47 @@
+/* Sidebar.module.scss */
+.sidebar {
+  grid-area: sidebar; /* AppLayout의 grid-template-areas와 연동 */
+  background-color: #202225;
+  color: #b9bbbe;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0;
+}
+
+.logo {
+  padding: 0 1rem 1rem 1rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-align: center;
+}
+
+.nav {
+  flex-grow: 1;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  margin: 0.1rem 1rem;
+  border-radius: 4px;
+  color: #b9bbbe;
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+
+  &:hover,
+  &.active {
+    background-color: #36393f;
+    color: #ffffff;
+  }
+}
+
+.userProfile {
+  padding: 1rem;
+  margin-top: auto;
+  background-color: #292b2f;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}

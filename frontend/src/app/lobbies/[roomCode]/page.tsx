@@ -7,16 +7,16 @@ import { useAuthStore } from '@/stores/authStore';
 import styles from './GameRoomDetailPage.module.scss';
 import { useRouter } from "next/navigation";
 
-import { Card, CardContent, Typography, Button, List, ListItem, ListItemText, CircularProgress, Chip, Paper, Grid } from '@mui/material';
+import { Card, CardContent, Typography, Button, List, ListItem, ListItemText, CircularProgress, Chip, Paper } from '@mui/material';
+import Grid from '@mui/material/Grid';
 
 const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
     const [room, setRoom] = useState<GameRoomDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const { username } = useAuthStore();
     const { roomCode } = params;
-    const router = useRouter(); // router는 나중에 페이지 이동 등에 사용할 수 있으므로 유지합니다.
+    const router = useRouter();
 
-    // useCallback으로 함수를 감싸 불필요한 재성성을 방지합니다.
     const fetchRoomDetails = useCallback(async () => {
         try {
             const data = await getGameRoomDetails(roomCode);
@@ -30,9 +30,7 @@ const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
 
     useEffect(() => {
         if (roomCode) {
-            // void 연산자를 사용하여 프로미스를 의도적으로 무시함을 명시합니다.
-            // 이것이 이 경고를 해결하는 가장 깔끔한 방법입니다.
-            void fetchRoomDetails();
+            fetchRoomDetails();
         }
     }, [roomCode, fetchRoomDetails]);
 
@@ -43,6 +41,7 @@ const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
             await fetchRoomDetails();
         } catch (error) {
             alert('방 참가에 실패했습니다. 이미 참가했거나 방이 가득 찼을 수 있습니다.');
+            console.error('Failed to join room:', error);
         }
     };
 
@@ -59,6 +58,7 @@ const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
                 await fetchRoomDetails();
             } catch (error) {
                 alert('팀 구성 시작에 실패했습니다.');
+                console.error('Failed to start team composition:', error);
             }
         } else if (method !== null) {
             alert('잘못된 방식입니다. AUTO 또는 AUCTION 중 하나를 입력해주세요.');
@@ -89,9 +89,8 @@ const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
                 </Typography>
             </Paper>
 
-            {/* 보내주신 Grid 구조를 그대로 유지합니다. */}
             <Grid container spacing={3}>
-                <Grid size={{ xs: 12, md: 8 }}>
+                <Grid xs={12} md={8}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6">참가자 목록</Typography>
@@ -106,7 +105,7 @@ const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
                     </Card>
                 </Grid>
 
-                <Grid size={{ xs: 12, md: 4 }}>
+                <Grid xs={12} md={4}>
                     <Card>
                         <CardContent className={styles.actions}>
                             <Typography variant="h6">게임 관리</Typography>
