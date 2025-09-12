@@ -1,76 +1,55 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { getGameRoomDetails, joinGameRoom, startTeamComposition } from '@/services/api';
-import { GameRoomDetails, Participant } from '@/types/gameRoom';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { getGameRoomByCode } from '@/services/api';
+import { GameRoom, Participant } from '@/types/gameRoom';
 import styles from './GameRoomDetailPage.module.scss';
-import { useRouter } from "next/navigation";
 
-import { Card, CardContent, Typography, Button, List, ListItem, ListItemText, CircularProgress, Chip, Paper } from '@mui/material';
+import { Paper, Typography, Card, CardContent, List, ListItem, ListItemText, CircularProgress, Button } from '@mui/material';
 import Grid from '@mui/material/Grid';
 
-const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
-    const [room, setRoom] = useState<GameRoomDetails | null>(null);
-    const [loading, setLoading] = useState(true);
-    const { username } = useAuthStore();
+// 1. 페이지 props를 위한 올바른 인터페이스를 정의합니다.
+interface GameRoomDetailPageProps {
+    params: {
+        roomCode: string;
+    };
+}
+
+// 2. 컴포넌트가 위 인터페이스를 props 타입으로 받도록 명시합니다.
+const GameRoomDetailPage = ({ params }: GameRoomDetailPageProps) => {
     const { roomCode } = params;
-    const router = useRouter();
+    const { isAuthenticated, username } = useAuthStore();
+    const [room, setRoom] = useState<GameRoom | null>(null);
+    const [loading, setLoading] = useState(true);
 
     const fetchRoomDetails = useCallback(async () => {
+        if (!isAuthenticated || !roomCode) return;
         try {
-            const data = await getGameRoomDetails(roomCode);
+            setLoading(true);
+            const data = await getGameRoomByCode(roomCode as string);
             setRoom(data);
         } catch (error) {
-            console.error("방 상세 정보를 불러오는데 실패했습니다:", error);
+            console.error('게임 방 정보를 불러오는데 실패했습니다:', error);
+            setRoom(null); // 에러 발생 시 room 정보를 초기화
         } finally {
             setLoading(false);
         }
-    }, [roomCode]);
+    }, [isAuthenticated, roomCode]);
 
     useEffect(() => {
-        if (roomCode) {
-            fetchRoomDetails();
-        }
-    }, [roomCode, fetchRoomDetails]);
-
-    const handleJoinRoom = async () => {
-        try {
-            await joinGameRoom(roomCode);
-            alert('방에 참가했습니다!');
+        const loadRoomDetails = async () => {
             await fetchRoomDetails();
-        } catch (error) {
-            alert('방 참가에 실패했습니다. 이미 참가했거나 방이 가득 찼을 수 있습니다.');
-            console.error('Failed to join room:', error);
-        }
-    };
-
-    const handleLeaveRoom = () => {
-        alert('나가기 API는 아직 구현되지 않았습니다.');
-    };
-
-    const handleStartTeamComposition = async () => {
-        const method = prompt("팀 구성 방식을 입력하세요 (AUTO 또는 AUCTION):");
-        if (method && (method.toUpperCase() === 'AUTO' || method.toUpperCase() === 'AUCTION')) {
-            try {
-                await startTeamComposition(roomCode, method.toUpperCase() as 'AUTO' | 'AUCTION');
-                alert('팀 구성이 시작되었습니다!');
-                await fetchRoomDetails();
-            } catch (error) {
-                alert('팀 구성 시작에 실패했습니다.');
-                console.error('Failed to start team composition:', error);
-            }
-        } else if (method !== null) {
-            alert('잘못된 방식입니다. AUTO 또는 AUCTION 중 하나를 입력해주세요.');
-        }
-    };
+        };
+        loadRoomDetails().catch(console.error);
+    }, [fetchRoomDetails]);
 
     if (loading) {
-        return <div className={styles.centered}><CircularProgress /></div>;
+        return <CircularProgress />;
     }
 
     if (!room) {
-        return <div className={styles.centered}><Typography variant="h6">방을 찾을 수 없습니다.</Typography></div>;
+        return <Typography>존재하지 않거나 참여할 수 없는 방입니다.</Typography>;
     }
 
     const isHost = room.hostName === username;
@@ -80,7 +59,9 @@ const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
         <div className={styles.container}>
             <Paper elevation={3} className={styles.header}>
                 <Typography variant="h4" component="h1">{room.title}</Typography>
-                <Chip label={room.status} color={room.status === 'WAITING' ? 'success' : 'default'} />
+                <Typography variant="body1" color={room.status === 'WAITING' ? 'success' : 'default'}>
+                    상태: {room.status}
+                </Typography>
                 <Typography variant="body1">
                     인원: {room.currentParticipants} / {room.maxParticipants}
                 </Typography>
@@ -90,14 +71,14 @@ const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
             </Paper>
 
             <Grid container spacing={3}>
-                <Grid xs={12} md={8}>
+                <Grid item xs={12} md={8}>
                     <Card>
                         <CardContent>
-                            <Typography variant="h6">참가자 목록</Typography>
+                            <Typography variant="h6">참가자</Typography>
                             <List>
-                                {Array.isArray(room.participants) && room.participants.map((p: Participant) => (
+                                {Array.isArray(room.participants) && room.participants.map((p) => (
                                     <ListItem key={p.nickname}>
-                                        <ListItemText primary={p.nickname} secondary={p.summonerName || '소환사명 미등록'} />
+                                        <ListItemText primary={p.nickname} secondary={p.summonerName || '소환사명 없음'} />
                                     </ListItem>
                                 ))}
                             </List>
@@ -105,20 +86,12 @@ const GameRoomDetailPage = ({ params }: { params: { roomCode: string } }) => {
                     </Card>
                 </Grid>
 
-                <Grid xs={12} md={4}>
+                <Grid item xs={12} md={4}>
                     <Card>
                         <CardContent className={styles.actions}>
-                            <Typography variant="h6">게임 관리</Typography>
-                            {isHost ? (
-                                <>
-                                    <Button variant="contained" color="primary" fullWidth onClick={handleStartTeamComposition}>팀 구성 시작</Button>
-                                    <Button variant="contained" color="secondary" fullWidth>게임 시작</Button>
-                                </>
-                            ) : isParticipant ? (
-                                <Button variant="contained" color="error" fullWidth onClick={handleLeaveRoom}>나가기</Button>
-                            ) : (
-                                <Button variant="contained" color="primary" fullWidth onClick={handleJoinRoom}>참가하기</Button>
-                            )}
+                            <Typography variant="h6">팀 구성/매칭</Typography>
+                            {isHost && <Button variant="contained">팀 구성 시작</Button>}
+                            {!isParticipant && <Button variant="contained" color="primary">참가하기</Button>}
                         </CardContent>
                     </Card>
                 </Grid>

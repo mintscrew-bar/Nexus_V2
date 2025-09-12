@@ -2,17 +2,16 @@
 
 export interface Participant {
     nickname: string;
-    summonerName: string | null;
-    teamNumber: number | null;
+    summonerName?: string; // 소환사명은 없을 수도 있으므로 optional
+    teamNumber?: number;
 }
 
-export interface GameRoomDetails {
+export interface GameRoom {
     roomCode: string;
     title: string;
     maxParticipants: number;
     currentParticipants: number;
     hostName: string;
-    status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | string;
-    createdAt: string; // ISO 8601 날짜 형식의 문자열
+    status: string;
     participants: Participant[];
 }

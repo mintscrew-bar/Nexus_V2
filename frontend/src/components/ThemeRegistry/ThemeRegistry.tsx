@@ -1,21 +1,27 @@
-// frontend/src/components/ThemeRegistry/ThemeRegistry.tsx
-
 'use client';
-import createCache from '@emotion/cache';
+import createCache, { Options as OptionsOfCreateCache } from '@emotion/cache';
 import { useServerInsertedHTML } from 'next/navigation';
-import { CacheProvider } from '@emotion/react';
-import { ThemeProvider } from '@mui/material/styles';
+import { CacheProvider as EmotionCacheProvider } from '@emotion/react';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import theme from '../../theme/theme';
+import theme from '@/theme/theme';
 import React from 'react';
 
-// This implementation is directly from emotion-js
-// https://github.com/emotion-js/emotion/issues/2928#issuecomment-1319747902
-export default function ThemeRegistry(props: { options?: any, children: React.ReactNode }) {
-    const { options, children } = props;
+// ThemeRegistry 컴포G넌트의 props 타입을 children만 받도록 수정합니다.
+interface ThemeRegistryProps {
+    children: React.ReactNode;
+}
+
+export default function ThemeRegistry(props: ThemeRegistryProps) {
+    const { children } = props;
+
+    // options를 props가 아닌, 컴포넌트 내부에서 직접 정의합니다.
+    const options: OptionsOfCreateCache = {
+        key: 'mui',
+    };
 
     const [{ cache, flush }] = React.useState(() => {
-        const cache = createCache(options || { key: 'mui' });
+        const cache = createCache(options);
         cache.compat = true;
         const prevInsert = cache.insert;
         let inserted: string[] = [];
@@ -55,11 +61,11 @@ export default function ThemeRegistry(props: { options?: any, children: React.Re
     });
 
     return (
-        <CacheProvider value={cache}>
-            <ThemeProvider theme={theme}>
+        <EmotionCacheProvider value={cache}>
+            <MuiThemeProvider theme={theme}>
                 <CssBaseline />
                 {children}
-            </ThemeProvider>
-        </CacheProvider>
+            </MuiThemeProvider>
+        </EmotionCacheProvider>
     );
 }

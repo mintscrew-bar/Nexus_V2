@@ -62,3 +62,8 @@ export const startTeamComposition = (roomCode: string, method: 'AUTO' | 'AUCTION
         body: JSON.stringify({ method }),
     });
 };
+
+// roomCode로 특정 게임 방 정보를 가져오는 API 함수
+export const getGameRoomByCode = (roomCode: string) => {
+    return apiFetch(`/api/games/${roomCode}`, { method: 'GET' });
+};

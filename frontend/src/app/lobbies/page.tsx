@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect,  useCallback } from 'react';
 // createGameRoom을 api 서비스에서 가져옵니다.
 import { getGameRooms, createGameRoom } from '@/services/api';
 import { useAuthStore } from '@/stores/authStore';
@@ -27,7 +27,7 @@ export default function LobbiesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false); // 모달의 열림/닫힘 상태
 
     // 방 목록을 불러오는 함수를 분리하여 재사용성을 높입니다.
-    const fetchRooms = async () => {
+    const fetchRooms = useCallback (async () => {
         if (!isAuthenticated) return;
         try {
             const data = await getGameRooms();
@@ -37,11 +37,11 @@ export default function LobbiesPage() {
         } catch (error) {
             console.error('게임 방 목록을 불러오는데 실패했습니다:', error);
         }
-    };
+    }, [isAuthenticated]);
 
     useEffect(() => {
         fetchRooms().catch(console.error);
-    }, [isAuthenticated]);
+    }, [fetchRooms]);
 
     // 새로운 방을 만드는 함수
     const handleCreateRoom = async (title: string, maxParticipants: number) => {
