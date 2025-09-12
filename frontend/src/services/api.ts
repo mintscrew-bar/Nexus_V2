@@ -40,3 +40,25 @@ export const getGameRooms = () => {
 export const getGameRoomDetails = (roomCode: string) => {
     return apiFetch(`/api/games/${roomCode}`, { method: 'GET' });
 };
+/**
+* 새로운 게임 방을 생성하는 API 함수
+* @param title 방 제목
+* @param maxParticipants 최대 참가 인원
+*/
+export const createGameRoom = (title: string, maxParticipants: number) => {
+    return apiFetch('/api/games', {
+        method: 'POST',
+        body: JSON.stringify({title, maxParticipants}),
+    });
+};
+export const joinGameRoom = (roomCode: string) => {
+    return apiFetch(`/api/games/${roomCode}/join`, {
+        method: 'POST',
+    });
+};
+export const startTeamComposition = (roomCode: string, method: 'AUTO' | 'AUCTION') => {
+    return apiFetch(`/api/games/${roomCode}/team-composition`, {
+        method: 'POST',
+        body: JSON.stringify({ method }),
+    });
+};
