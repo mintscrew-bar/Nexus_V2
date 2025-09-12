@@ -1,0 +1,27 @@
+// frontend/src/app/lobbies/[roomCode]/GameRoomDetailPage.module.scss
+
+.container {
+  padding: 24px;
+}
+
+.header {
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--theme-bg-secondary);
+}
+
+.centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

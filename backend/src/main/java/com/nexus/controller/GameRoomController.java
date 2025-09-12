@@ -66,4 +66,16 @@ public class GameRoomController {
         gameRoomService.joinGameRoom(roomCode, userEmail);
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * 특정 게임 로비의 상세 정보 조회 api
+     * @param   roomCode 로비의 고유 코드
+     * @return GameRoomDto.Response
+     */
+    @GetMapping("/{roomCode}")
+    public ResponseEntity<GameRoomDto.Response> getGameRoomDetails(@PathVariable String roomCode) {
+        // GameRoomService에 roomCode로 방을 찾는 메서드를 구현해야 합니다.
+        GameRoomDto.Response roomDetails = gameRoomService.getGameRoomByCode(roomCode);
+        return ResponseEntity.ok(roomDetails);
+    }
 }

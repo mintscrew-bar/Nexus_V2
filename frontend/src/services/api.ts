@@ -36,3 +36,7 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
 export const getGameRooms = () => {
   return apiFetch('/api/games', { method: 'GET' });
 };
+// 특정 게임 방의 상세 정보를 가져오는 API 함수
+export const getGameRoomDetails = (roomCode: string) => {
+    return apiFetch(`/api/games/${roomCode}`, { method: 'GET' });
+};

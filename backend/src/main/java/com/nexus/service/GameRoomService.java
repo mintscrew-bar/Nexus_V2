@@ -64,6 +64,15 @@ public class GameRoomService {
                 .map(gameRoomMapper::toResponseDto)
                 .collect(Collectors.toList());
     }
+    public GameRoomDto.Response getGameRoomByCode(String roomCode) {
+        // roomCode를 기반으로 데이터베이스에서 게임 방을 찾습니다.
+        GameRoom gameRoom = gameRoomRepository.findByRoomCode(roomCode)
+                // 방을 찾지 못하면 RoomNotFoundException 예외를 발생시킵니다.
+                .orElseThrow(() -> new RoomNotFoundException("해당 코드를 가진 방을 찾을 수 없습니다: " + roomCode));
+
+        // 찾은 GameRoom 엔티티를 DTO로 변환하여 반환합니다.
+        return gameRoomMapper.toResponseDto(gameRoom);
+    }
 
     @Transactional
     public GameRoomDto.Response joinGameRoom(String roomCode, String userEmail) {
