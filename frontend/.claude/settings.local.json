@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//e/project/Nexus_V2/backend/src/main/java/com/nexus/entity/**)",
+      "Read(//e/project/Nexus_V2/backend/src/main/java/com/nexus/service/**)",
+      "Read(//e/project/Nexus_V2/**)",
+      "Bash(./gradlew build:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

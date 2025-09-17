@@ -14,12 +14,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // --- 아래 메서드가 추가되었습니다 ---
 
-    /**
-     * Keycloak ID를 사용하여 사용자를 조회합니다.
-     * @param keycloakId Keycloak에서 발급한 사용자의 고유 ID
-     * @return Optional<User>
-     */
     Optional<User> findByKeycloakId(String keycloakId);
     Optional<User> findByEmail(String email);
     Optional<User> findByUserCode(String userCode); 
+    Optional<User> findByNickname(String nickname);
 }

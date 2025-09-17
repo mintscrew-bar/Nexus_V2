@@ -2,8 +2,9 @@
 import { useAuthStore } from '@/stores/authStore'; // 절대 경로로 수정
 
 // API 호출을 위한 기본 fetch 함수
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 const apiFetch = async (url: string, options: RequestInit = {}) => {
-  const token = useAuthStore.getState().keycloak?.token;
+  const token = useAuthStore.getState().token || undefined;
 
   // 헤더의 타입을 명확하게 Record<string, string>으로 지정합니다.
   const headers: Record<string, string> = {
@@ -15,7 +16,7 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`http://localhost:8080${url}`, {
+  const response = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers,
   });

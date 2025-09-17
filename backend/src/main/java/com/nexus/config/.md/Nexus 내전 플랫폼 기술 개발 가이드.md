@@ -39,10 +39,26 @@
     - `.env` 파일 생성
 
 ```
+# 외부 API
 RIOT_API_KEY=your_key
+
+# 데이터베이스
 DATABASE_URL=jdbc:postgresql://localhost:5432/nexus
 REDIS_URL=redis://localhost:6379
+
+# JWT 인증
 JWT_SECRET=your_jwt_secret
+
+# OAuth2 소셜 로그인
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+DISCORD_CLIENT_ID=your_discord_client_id
+DISCORD_CLIENT_SECRET=your_discord_client_secret
+
+# 이메일 (Gmail SMTP)
+GMAIL_USERNAME=your_gmail@gmail.com
+GMAIL_APP_PASSWORD=your_16_character_app_password
+EMAIL_FROM=noreply@nexus.com
 ```
 
     - Docker Compose
@@ -69,13 +85,16 @@ Frontend (Next.js) ↔ Backend (Spring Boot) ↔ PostgreSQL/Redis
     - `auth/`, `games/`, `records/`, `boards/`, `admin/` 패키지 분리
 - `common/`: 공유 모델, 유틸리티, 예외 처리
 - `infra/`: Docker, CI/CD 스크립트, 모니터링 설정
--   아키텍처 및 모듈 구성 (보완)
-    text
+
+### 로컬 인증 아키텍처 구성
+```
                         [User]
                             ↓
-        [Next.js/React] ←→ [Keycloak] ←→ [Spring Boot API]
-                    소셜로그인/OAuth   인증 검증 및 API 접근제어
-    인증 서버(Keycloak) 및 소셜 로그인 외부 인증 구조, API 키 관리 보강
+        [Next.js/React] ←→ [Spring Boot API + JWT]
+                    이메일/패스워드 인증   JWT 토큰 검증 및 API 접근제어
+```
+
+로컬 인증 서버 및 JWT 기반 인증 구조, 이메일 검증 시스템 포함
 
 ***
 
@@ -103,34 +122,44 @@ CREATE TABLE users (
 ## 5. 백엔드 서비스 구현
 
 1. Spring Boot 설정
-    - `application.yml`에 DB·Redis 설정
+    - `application.yml`에 DB·Redis·JWT 설정
 2. 보안
     - Spring Security + JWT 필터
+    - BCrypt 패스워드 암호화
+    - Rate Limiting 및 보안 헤더 필터
 3. REST API 컨트롤러
     - `@RestController` 분리(인증, 게임, 게시판, 관리자)
+    - 글로벌 예외 처리 (`@ControllerAdvice`)
 4. 서비스 레이어
     - 트랜잭션 관리(`@Transactional`)
+    - 이메일 검증 서비스
+    - JWT 토큰 관리자
 5. 리포지토리
     - Spring Data JPA 인터페이스
+6. 보안 기능
+    - SecurityValidator: 입력 검증 및 XSS 방지
+    - AuditService: 사용자 액션 로그 기록
 
 ***
 
 ## 6. 프론트엔드 애플리케이션 구현
 
 1. Next.js 프로젝트 구조
-    - `pages/`, `components/`, `stores/`, `services/`
-2. 인증 흐름
-    - OAuth 연동 팝업 → 토큰 저장 → 전역 상태 관리
+    - App Router 기반 (`app/` 디렉토리)
+    - `components/`, `stores/`, `services/` 구조
+2. 로컬 인증 흐름
+    - 이메일/패스워드 로그인 → JWT 토큰 저장 → 전역 상태 관리
+    - 회원가입 시 이메일 검증 프로세스
+    - 자동 로그인 상태 유지
 3. UI 컴포넌트
-    - MUI 테마 커스터마이징
+    - Material-UI (MUI) 테마 커스터마이징
+    - SCSS 모듈을 활용한 컴포넌트 스타일링
 4. API 호출
-    - Axios 인스턴스, 인터셉터로 JWT 헤더 부착
-
-5. Keycloak JS SDK 또는 커스텀 OIDC 인증 모듈 사용
-
-    - Google/Discord 소셜 버튼 제공 → Keycloak broker 엔드포인트로 리디렉션
-
-    - 로그인 성공 후 JWT를 글로벌 상태(Zustand 등)에 저장, API 요청시 헤더에 포함
+    - Axios 인스턴스, 인터셉터로 JWT 헤더 자동 부착
+    - 토큰 만료 시 자동 갱신 또는 로그아웃 처리
+5. 상태 관리
+    - Zustand를 활용한 인증 상태 관리
+    - 사용자 정보 및 토큰 영구 저장
 
 ***
 ## 7. 실시간 통신(채팅·상태 동기화)
@@ -168,30 +197,37 @@ String url = "https://api.riotgames.com/lol/match/v4/matches/" + matchId + "?api
 ***
 ## 9. 인증·인가 및 보안
 
-- **Keycloak 기반 통합 인증/권한 관리 도입**
-  - Keycloak은 OAuth2, OpenID Connect를 지원하는 오픈소스 인증 서버
-  - 자체 계정 인증과 함께 Google, Discord 등의 소셜 로그인 연동
-  - 관리자 콘솔에서 Realm과 Client를 생성 및 설정하여 인증 정책 관리
+- **하이브리드 인증 시스템**
+  - 로컬 JWT 인증: 이메일/패스워드 기반 회원가입 및 로그인
+  - OAuth2 소셜 로그인: Google, Discord 연동
+  - Spring Security + JWT를 활용한 통합 인증 서버 구현
+  - BCrypt 패스워드 해싱 (강도 12)으로 보안 강화
 
-- **소셜 로그인 설정 및 플로우**
-  1. Keycloak 관리자 콘솔에서 Identity Providers에 Google, Discord 등록
-  2. 각 소셜 로그인 서비스에서 클라이언트 ID 및 클라이언트 시크릿을 발급 받아 설정
-  3. 프론트엔드 로그인 시 소셜 로그인 버튼 클릭 → Keycloak OAuth 엔드포인트로 리다이렉션
-  4. 사용자가 소셜 서비스 인증 완료 후 Keycloak이 콜백 처리
-  5. 액세스 토큰(JWT)과 사용자 프로필 정보(이메일, 닉네임 등) 획득 → 프론트엔드 및 백엔드 인증
+- **인증 플로우**
+  1. 로컬 회원가입: 이메일 검증 → 패스워드 설정 → 계정 생성
+  2. 로컬 로그인: 이메일/패스워드 검증 → JWT 토큰 발급 (7일 만료)
+  3. OAuth2 로그인: 소셜 로그인 → 자동 계정 생성/로그인 → JWT 토큰 발급
+  4. API 인증: Authorization Bearer 헤더로 JWT 토큰 검증
+  5. 토큰 갱신: 리프레시 토큰 없이 재로그인 방식 채택
 
 - **프론트엔드 연동**
-  - Keycloak JS SDK 혹은 OIDC 클라이언트 라이브러리를 사용하여 로그인, 토큰 관리 구현
-  - 성공적인 인증 후 받은 JWT 토큰을 전역 상태에 저장하고 API 호출 시 Authorization 헤더에 설정
+  - 로컬 인증 API (`/api/auth/login`, `/api/auth/register`) 활용
+  - OAuth2 인증: Spring Security OAuth2 Client 자동 리다이렉트 (`/oauth2/authorization/{provider}`)
+  - 소셜 로그인 콜백 처리 (`/oauth/callback`)
+  - Zustand 스토어로 JWT 토큰 및 사용자 정보 통합 관리
+  - Axios 인터셉터로 API 요청 시 자동 토큰 부착
 
-- **백엔드 연동**
-  - Spring Boot 환경에서는 Keycloak Spring Boot Starter 모듈을 사용해 JWT 토큰 검증 및 권한 관리를 수행
-  - `application.yml`에 Keycloak 서버 URL과 Realm 정보를 설정하여 보호된 API 구현
-  - 역할 기반 접근 제어(`@PreAuthorize`) 적용
+- **백엔드 보안**
+  - Spring Security OAuth2 Resource Server로 JWT 검증
+  - `SecurityConfig`에서 엔드포인트별 인증 정책 설정
+  - 역할 기반 접근 제어 (`@PreAuthorize`) 적용
+  - 보안 필터: Rate Limiting, Security Headers
 
-- **기타 보안 설정**
-  - CORS, CSRF, Rate Limiting은 기존 방식 유지
-  - Keycloak을 통한 2차 인증(MFA), 계정 잠금, 비밀번호 정책 등 확장 가능
+- **추가 보안 설정**
+  - CORS 설정으로 프론트엔드-백엔드 통신 제한
+  - CSRF 비활성화 (JWT 토큰 방식이므로 불필요)
+  - 입력 검증 및 XSS 방지 (`SecurityValidator`)
+  - 사용자 액션 로깅 (`AuditService`)
 
 ***
 
@@ -226,8 +262,10 @@ String url = "https://api.riotgames.com/lol/match/v4/matches/" + matchId + "?api
 - Prometheus 메트릭 노출(Actuator + Micrometer)
 - Grafana 대시보드: JVM, HTTP 응답, DB 커넥션
 - Sentry 연동: 예외 모니터링
-- Keycloak Realm 별 세부 정책 설정/로그/계정관리 및 장애 시 복구 방법 추가
-- 신속하게 신규 인증(예: Kakao, Github) 추가·해제 가능
+- 로컬 인증 시스템 모니터링: 로그인 실패율, 회원가입 통계
+- 보안 이벤트 모니터링: Rate Limiting, 비정상 접근 탐지
+- JWT 토큰 관련 메트릭: 토큰 만료, 검증 실패 등
+- 이메일 검증 시스템 모니터링 및 장애 대응
 
 ***
 

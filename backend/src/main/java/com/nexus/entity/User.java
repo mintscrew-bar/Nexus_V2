@@ -18,7 +18,8 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    // Keycloak 제거: 내부 인증으로 전환. 과거 컬럼은 nullable 로 유지(마이그레이션 최소화)
+    @Column(unique = true)
     private String keycloakId;
 
     @Column(unique = true)
@@ -39,6 +40,9 @@ public class User {
     private int profileIconId;
     private long summonerLevel;
     private String avatarUrl;
+
+    // 내부 인증용 비밀번호 해시(BCrypt)
+    private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

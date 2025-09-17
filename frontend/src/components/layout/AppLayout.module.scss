@@ -1,32 +1,22 @@
 /* AppLayout.module.scss */
 
-.container {
-  display: flex;
-  flex-direction: column;
+.appLayout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: 64px 1fr;
+  grid-template-areas:
+    "sidebar header"
+    "sidebar main";
   min-height: 100vh;
-  background-color: #f0f2f5; /* 기본 배경색 */
+  background-color: #0E1117;
 }
 
-.header {
-  width: 100%;
-  padding: 1rem 2rem;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e8e8e8;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  z-index: 10;
+.contentWrapper {
+  display: contents;
 }
 
-.main {
-  flex-grow: 1;
-  width: 100%;
-  max-width: 1200px; /* 최대 너비 제한 */
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.footer {
-  text-align: center;
-  padding: 1rem;
-  background-color: #ffffff;
-  border-top: 1px solid #e8e8e8;
+.mainContent {
+  grid-area: main;
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(21,26,33,0.92) 0%, rgba(14,17,23,1) 100%);
 }

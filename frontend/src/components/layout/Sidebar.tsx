@@ -25,7 +25,10 @@ const Sidebar = () => {
                         <button onClick={logout} className={styles.logoutButton}>로그아웃</button>
                     </>
                 ) : (
-                    <p>로그인이 필요합니다.</p>
+                    <>
+                        <p>로그인이 필요합니다.</p>
+                        <Link href="/login" className={styles.navItem}>로그인하기</Link>
+                    </>
                 )}
             </div>
         </aside>

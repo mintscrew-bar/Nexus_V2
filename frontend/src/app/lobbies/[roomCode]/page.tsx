@@ -1,27 +1,26 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { getGameRoomByCode } from '@/services/api';
+import { getGameRoomByCode, startTeamComposition, joinGameRoom } from '@/services/api';
 import { GameRoom, Participant } from '@/types/gameRoom';
 import styles from './GameRoomDetailPage.module.scss';
 
-import { Paper, Typography, Card, CardContent, List, ListItem, ListItemText, CircularProgress, Button } from '@mui/material';
-import Grid from '@mui/material/Grid';
+import { Paper, Typography, Card, CardContent, List, ListItem, ListItemText, CircularProgress, Button, Grid } from '@mui/material';
 
-// 1. 페이지 props를 위한 올바른 인터페이스를 정의합니다.
-interface GameRoomDetailPageProps {
-    params: {
-        roomCode: string;
-    };
+export interface GameRoomDetailPageProps {
+  params: {
+    roomCode: string;
+  };
 }
 
-// 2. 컴포넌트가 위 인터페이스를 props 타입으로 받도록 명시합니다.
 const GameRoomDetailPage = ({ params }: GameRoomDetailPageProps) => {
     const { roomCode } = params;
     const { isAuthenticated, username } = useAuthStore();
     const [room, setRoom] = useState<GameRoom | null>(null);
     const [loading, setLoading] = useState(true);
+    const [joining, setJoining] = useState(false);
+    const [starting, setStarting] = useState(false);
 
     const fetchRoomDetails = useCallback(async () => {
         if (!isAuthenticated || !roomCode) return;
@@ -31,7 +30,7 @@ const GameRoomDetailPage = ({ params }: GameRoomDetailPageProps) => {
             setRoom(data);
         } catch (error) {
             console.error('게임 방 정보를 불러오는데 실패했습니다:', error);
-            setRoom(null); // 에러 발생 시 room 정보를 초기화
+            setRoom(null);
         } finally {
             setLoading(false);
         }
@@ -45,21 +44,41 @@ const GameRoomDetailPage = ({ params }: GameRoomDetailPageProps) => {
     }, [fetchRoomDetails]);
 
     if (loading) {
-        return <CircularProgress />;
+        return <div className={styles.centered}><CircularProgress /></div>;
     }
 
     if (!room) {
-        return <Typography>존재하지 않거나 참여할 수 없는 방입니다.</Typography>;
+        return <div className={styles.centered}><Typography>존재하지 않거나 참여할 수 없는 방입니다.</Typography></div>;
     }
 
     const isHost = room.hostName === username;
-    const isParticipant = Array.isArray(room.participants) && room.participants.some(p => p.nickname === username);
+    const isParticipant = Array.isArray(room.participants) && room.participants.some((p: Participant) => p.nickname === username);
+
+    const handleJoin = async () => {
+        try {
+            setJoining(true);
+            await joinGameRoom(roomCode);
+            await fetchRoomDetails();
+        } finally {
+            setJoining(false);
+        }
+    };
+
+    const handleStartComposition = async () => {
+        try {
+            setStarting(true);
+            await startTeamComposition(roomCode, 'AUTO');
+            await fetchRoomDetails();
+        } finally {
+            setStarting(false);
+        }
+    };
 
     return (
         <div className={styles.container}>
             <Paper elevation={3} className={styles.header}>
                 <Typography variant="h4" component="h1">{room.title}</Typography>
-                <Typography variant="body1" color={room.status === 'WAITING' ? 'success' : 'default'}>
+                <Typography variant="body1" color={room.status === 'WAITING' ? 'success.main' : 'text.secondary'}>
                     상태: {room.status}
                 </Typography>
                 <Typography variant="body1">
@@ -76,7 +95,7 @@ const GameRoomDetailPage = ({ params }: GameRoomDetailPageProps) => {
                         <CardContent>
                             <Typography variant="h6">참가자</Typography>
                             <List>
-                                {Array.isArray(room.participants) && room.participants.map((p) => (
+                                {Array.isArray(room.participants) && room.participants.map((p: Participant) => (
                                     <ListItem key={p.nickname}>
                                         <ListItemText primary={p.nickname} secondary={p.summonerName || '소환사명 없음'} />
                                     </ListItem>
@@ -89,9 +108,17 @@ const GameRoomDetailPage = ({ params }: GameRoomDetailPageProps) => {
                 <Grid item xs={12} md={4}>
                     <Card>
                         <CardContent className={styles.actions}>
-                            <Typography variant="h6">팀 구성/매칭</Typography>
-                            {isHost && <Button variant="contained">팀 구성 시작</Button>}
-                            {!isParticipant && <Button variant="contained" color="primary">참가하기</Button>}
+                            <Typography variant="h6">액션</Typography>
+                            {isHost && (
+                                <Button variant="contained" onClick={handleStartComposition} disabled={starting} sx={{ mt: 1 }}>
+                                    {starting ? '시작 중...' : '팀 구성 시작'}
+                                </Button>
+                            )}
+                            {!isParticipant && (
+                                <Button variant="contained" color="primary" onClick={handleJoin} disabled={joining} sx={{ mt: 1 }}>
+                                    {joining ? '참가 중...' : '참가하기'}
+                                </Button>
+                            )}
                         </CardContent>
                     </Card>
                 </Grid>

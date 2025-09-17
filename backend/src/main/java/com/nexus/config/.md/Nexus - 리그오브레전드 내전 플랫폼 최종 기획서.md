@@ -178,7 +178,8 @@
 
 ### 4.4 사용자 관리
 
-- **OAuth 로그인**: Google, Discord, Riot 계정 연동
+- **로컬 계정 시스템**: 이메일/패스워드 기반 회원가입 및 로그인
+- **이메일 검증**: 회원가입 시 이메일 인증 코드 발송
 - **프로필 관리**: 아바타, 선호 포지션, 전적 공개 설정
 - **친구 시스템**: 친구 추가, 온라인 상태, 게임 초대
 
@@ -276,15 +277,16 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- OAuth 연동 테이블
-CREATE TABLE oauth_accounts (
+-- 사용자 인증 테이블
+CREATE TABLE user_auth (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(id),
-    provider VARCHAR(20) NOT NULL, -- 'google', 'discord', 'riot'
-    provider_id VARCHAR(100) NOT NULL,
-    access_token TEXT,
-    refresh_token TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    password_hash VARCHAR(255) NOT NULL,
+    email_verified BOOLEAN DEFAULT FALSE,
+    verification_code VARCHAR(6),
+    verification_expires TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 게임 룸 테이블
@@ -346,11 +348,15 @@ CREATE INDEX idx_game_participants_room_user ON game_participants(room_id, user_
 ### 8.1 인증 API
 
 ```
-POST /api/auth/oauth/{provider}     # OAuth 로그인
-POST /api/auth/refresh              # 토큰 갱신
+POST /api/auth/register             # 회원가입
+POST /api/auth/login                # 로그인
 POST /api/auth/logout               # 로그아웃
+POST /api/auth/email/code           # 이메일 인증코드 발송
+POST /api/auth/email/verify         # 이메일 인증코드 확인
 GET  /api/auth/profile              # 내 프로필 조회
 PUT  /api/auth/profile              # 프로필 수정
+GET  /api/auth/check/nickname       # 닉네임 중복 확인
+GET  /api/auth/check/loltag         # LoL 태그 검증
 ```
 
 
@@ -398,11 +404,12 @@ POST /api/records/game-result       # 게임 결과 등록
 
 ### 9.2 애플리케이션 보안
 
-- **인증**: OAuth2 + JWT (액세스 토큰 1시간, 리프레시 토큰 30일)
+- **인증**: 로컬 JWT (토큰 7일 만료)
+- **패스워드 보안**: BCrypt 해싱 (강도 12)
 - **권한 관리**: Spring Security로 API별 권한 검증
-- **입력 검증**: @Valid 어노테이션, SQL Injection 방지
-- **XSS 방지**: React 기본 이스케이프, CSP 헤더 적용
-- **Rate Limiting**: IP별 100회/분 제한
+- **입력 검증**: @Valid 어노테이션, SecurityValidator로 XSS 방지
+- **Rate Limiting**: IP별 제한 및 보안 헤더 필터
+- **감사 로깅**: 모든 사용자 액션 기록 (AuditService)
 
 
 ### 9.3 데이터 보안
@@ -512,9 +519,9 @@ echo "✅ 배포 완료!"
 ### Phase 1: 기반 구축 (1-2주)
 
 - [x] 개발 환경 설정 (Docker, DB, 기본 프로젝트)
-- [x] 사용자 인증 시스템 (OAuth + JWT)
-- [ ] 기본 UI 레이아웃 (사이드바, 라우팅)
-- [ ] 데이터베이스 스키마 구현
+- [x] 사용자 인증 시스템 (로컬 JWT + 이메일 검증)
+- [x] 기본 UI 레이아웃 (사이드바, 라우팅)
+- [x] 데이터베이스 스키마 구현
 
 
 ### Phase 2: 내전 시스템 (3-4주)
@@ -653,4 +660,3 @@ echo "✅ 배포 완료!"
 **문서 버전**: 1.0
 **최종 수정일**: 2025년 8월 18일
 **작성자**: Nexus 개발자 
-

@@ -1,6 +1,6 @@
 # Nexus 플랫폼 API 정리 업데이트
 
-아래는 최신 아키텍처를 반영한 Keycloak 기반 인증 및 구글·디스코드 소셜 로그인 연동이 포함된 Nexus 플랫폼의 전체 API 목록입니다.
+아래는 최신 아키텍처를 반영한 하이브리드 인증 시스템(로컬 JWT + OAuth2 소셜 로그인)이 포함된 Nexus 플랫폼의 전체 API 목록입니다.
 
 ---
 
@@ -8,14 +8,20 @@
 
 | 분류         | 메서드   | 엔드포인트                                 | 설명                                                                                          |
 |--------------|----------|--------------------------------------------|-----------------------------------------------------------------------------------------------|
-| 인증         | POST     | /api/auth/keycloak/login                   | Keycloak 인증(소셜로그인 포함) 리다이렉션                                                      |
-| 인증         | GET      | /api/auth/keycloak/callback                | Keycloak 인증 콜백 처리, JWT 발급 및 사용자 정보 반환                                           |
-| 인증         | POST     | /api/auth/logout                           | 로그아웃 (Keycloak 세션 및 토큰 만료 처리)                                                     |
-| 인증         | GET      | /api/auth/profile                          | 현재 사용자 정보 조회, Keycloak 토큰 기반                                                      |
+| 인증         | POST     | /api/auth/register                         | 사용자 회원가입 (이메일/패스워드/닉네임/롤태그)                                                |
+| 인증         | POST     | /api/auth/login                            | 로그인 (이메일/패스워드) → JWT 토큰 발급                                                      |
+| 인증         | POST     | /api/auth/logout                           | 로그아웃 처리                                                                                  |
+| 인증         | POST     | /api/auth/email/code                       | 이메일 인증코드 발송                                                                           |
+| 인증         | POST     | /api/auth/email/verify                     | 이메일 인증코드 확인                                                                           |
+| 인증         | GET      | /api/auth/profile                          | 현재 사용자 정보 조회                                                                          |
 | 인증         | PUT      | /api/auth/profile                          | 사용자 프로필 정보 수정                                                                       |
-| 인증         | POST     | /api/auth/refresh                          | 액세스 토큰 갱신                                                                               |
-| 인증(소셜)   | GET      | /api/auth/keycloak/google                  | 구글 소셜로그인 리다이렉트(자동 핸들링)                                                        |
-| 인증(소셜)   | GET      | /api/auth/keycloak/discord                 | 디스코드 소셜로그인 리다이렉트(자동 핸들링)                                                    |
+| 인증         | GET      | /api/auth/check/nickname                   | 닉네임 중복 확인                                                                               |
+| 인증         | GET      | /api/auth/check/loltag                     | LoL 태그 검증                                                                                  |
+| OAuth2       | GET      | /oauth2/authorization/google               | Google OAuth2 로그인 리다이렉트                                                               |
+| OAuth2       | GET      | /oauth2/authorization/discord              | Discord OAuth2 로그인 리다이렉트                                                              |
+| OAuth2       | GET      | /api/auth/oauth2/callback/google           | Google OAuth2 콜백 처리                                                                        |
+| OAuth2       | GET      | /api/auth/oauth2/callback/discord          | Discord OAuth2 콜백 처리                                                                       |
+| OAuth2       | GET      | /api/auth/oauth2/user                      | 현재 OAuth2 사용자 정보 조회                                                                   |
 | 친구 관리    | GET      | /api/friends                               | 친구 목록 조회                                                                                 |
 | 친구 관리    | POST     | /api/friends/{username}                    | 친구 요청                                                                                      |
 | 친구 관리    | PUT      | /api/friends/{friendId}/accept             | 친구 요청 수락                                                                                 |
@@ -74,8 +80,28 @@
 
 ---
 
-- 모든 엔드포인트는 Keycloak Bearer 토큰 기반 인증을 요구합니다.
-- 구글, 디스코드 등 소셜 로그인은 Keycloak OpenID Connect 프로토콜로 처리됩니다.
-- 관리자/운영용 API는 역할(Role) 및 권한(Permission) 검증이 추가 적용됩니다.
-- API 요청 및 응답에 대한 세부 스펙(파라미터, 응답 예시 등)은 별도 문서 또는 Swagger/OpenAPI 문서를 참고하세요.
+## API 사용 가이드
+
+### 인증 방식
+- **로컬 인증**: 이메일/패스워드 로그인 → JWT 토큰 발급
+- **OAuth2 인증**: Google/Discord 소셜 로그인 → 자동 계정 생성 → JWT 토큰 발급
+- **API 인증**: JWT Bearer 토큰 기반 (Authorization: Bearer {token})
+
+### 토큰 및 보안
+- **토큰 만료**: 7일 (재로그인 필요)
+- **보안 기능**: Rate Limiting, XSS 방지, 입력 검증, 감사 로깅
+- **에러 응답**: 표준화된 ApiResponse 형식
+
+### OAuth2 플로우
+1. 프론트엔드에서 `/oauth2/authorization/{provider}` 호출
+2. Spring Security가 자동으로 OAuth2 제공자로 리다이렉트
+3. 사용자 인증 완료 후 `/api/auth/oauth2/callback/{provider}`로 콜백
+4. JWT 토큰과 함께 프론트엔드 `/oauth/callback`으로 리다이렉트
+
+### 이메일 기능
+- **Gmail SMTP**: 이메일 인증 코드 및 비밀번호 재설정 이메일 발송
+- **HTML 템플릿**: 브랜딩된 이메일 디자인 제공
+
+관리자/운영용 API는 역할(Role) 및 권한(Permission) 검증이 추가 적용됩니다.
+API 요청 및 응답에 대한 세부 스펙은 별도 문서 또는 Swagger/OpenAPI 문서를 참고하세요.
 

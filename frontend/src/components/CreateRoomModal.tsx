@@ -1,8 +1,8 @@
 // frontend/src/components/CreateRoomModal.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { Modal, Box, Typography, TextField, Button, Slider } from '@mui/material';
+import React, { useMemo, useState } from 'react';
+import { Modal, Box, Typography, TextField, Button, Slider, Alert } from '@mui/material';
 
 interface CreateRoomModalProps {
     open: boolean;
@@ -26,15 +26,34 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ open, onClose, onCrea
     const [title, setTitle] = useState('');
     const [maxParticipants, setMaxParticipants] = useState(10);
     const [isCreating, setIsCreating] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const titleError = useMemo(() => {
+        if (!title) return '방 제목은 필수입니다.';
+        if (title.length < 2) return '방 제목은 2자 이상이어야 합니다.';
+        if (title.length > 50) return '방 제목은 50자 이하여야 합니다.';
+        return null;
+    }, [title]);
+
+    const maxParticipantsError = useMemo(() => {
+        if (maxParticipants < 10) return '최소 인원은 10명입니다.';
+        if (maxParticipants > 50) return '최대 인원은 50명입니다.';
+        if (maxParticipants % 5 !== 0) return '인원은 5명 단위여야 합니다.';
+        return null;
+    }, [maxParticipants]);
 
     const handleSubmit = async () => {
+        setError(null);
         setIsCreating(true);
         try {
-            await onCreate(title, maxParticipants);
+            if (titleError || maxParticipantsError) {
+                throw new Error(titleError || maxParticipantsError || '유효하지 않은 입력입니다.');
+            }
+            await onCreate(title.trim(), maxParticipants);
             onClose(); // 성공 시 모달 닫기
         } catch (error) {
-            console.error("Failed to create room:", error);
-            // 사용자에게 에러 알림을 보여주는 로직 추가 가능
+            const message = error instanceof Error ? error.message : '방 생성에 실패했습니다.';
+            setError(message);
         } finally {
             setIsCreating(false);
         }
@@ -46,6 +65,9 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ open, onClose, onCrea
                 <Typography variant="h6" component="h2">
                     새로운 방 만들기
                 </Typography>
+                {error && (
+                    <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+                )}
                 <TextField
                     autoFocus
                     margin="dense"
@@ -55,6 +77,8 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ open, onClose, onCrea
                     variant="standard"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    error={Boolean(titleError)}
+                    helperText={titleError || ' '}
                 />
                 <Typography gutterBottom sx={{ mt: 2 }}>
                     최대 참가 인원: {maxParticipants}
@@ -69,9 +93,12 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ open, onClose, onCrea
                     min={10}
                     max={50}
                 />
+                {maxParticipantsError && (
+                    <Typography variant="caption" color="error">{maxParticipantsError}</Typography>
+                )}
                 <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
                     <Button onClick={onClose}>취소</Button>
-                    <Button onClick={handleSubmit} variant="contained" disabled={isCreating || !title}>
+                    <Button onClick={handleSubmit} variant="contained" disabled={isCreating || Boolean(titleError) || Boolean(maxParticipantsError)}>
                         {isCreating ? '생성 중...' : '만들기'}
                     </Button>
                 </Box>

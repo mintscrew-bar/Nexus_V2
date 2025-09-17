@@ -1,8 +1,8 @@
 /* Sidebar.module.scss */
 .sidebar {
   grid-area: sidebar; /* AppLayout의 grid-template-areas와 연동 */
-  background-color: #202225;
-  color: #b9bbbe;
+  background-color: #151A21;
+  color: #AAB2BD;
   display: flex;
   flex-direction: column;
   padding: 1rem 0;
@@ -20,27 +20,37 @@
   flex-grow: 1;
 }
 
-.navLink {
+.navItem {
   display: flex;
   align-items: center;
   padding: 0.75rem 1.5rem;
   margin: 0.1rem 1rem;
   border-radius: 4px;
-  color: #b9bbbe;
+  color: #AAB2BD;
   text-decoration: none;
   transition: background-color 0.2s, color 0.2s;
 
   &:hover,
   &.active {
-    background-color: #36393f;
-    color: #ffffff;
+    background-color: #1F2630;
+    color: #E6E8EA;
   }
 }
 
 .userProfile {
   padding: 1rem;
   margin-top: auto;
-  background-color: #292b2f;
+  background-color: #1A1F26;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* 컴포넌트에서 사용하는 클래스명과 일치하도록 alias 추가 */
+.profile {
+  padding: 1rem;
+  margin-top: auto;
+  background-color: #1A1F26;
   display: flex;
   align-items: center;
   gap: 0.75rem;

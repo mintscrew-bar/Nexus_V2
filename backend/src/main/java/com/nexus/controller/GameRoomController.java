@@ -1,9 +1,11 @@
 package com.nexus.controller;
 
+import com.nexus.dto.ApiResponse;
 import com.nexus.dto.GameRoomDto;
 import com.nexus.service.GameRoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/games")
 @RequiredArgsConstructor
+@Slf4j
 public class GameRoomController {
 
     private final GameRoomService gameRoomService;
@@ -23,22 +26,24 @@ public class GameRoomController {
      * 새로운 게임 로비(내전 방)를 생성하는 API입니다.
      */
     @PostMapping
-    public ResponseEntity<GameRoomDto.Response> createGameRoom(
+    public ResponseEntity<ApiResponse<GameRoomDto.Response>> createGameRoom(
             @Valid @RequestBody GameRoomDto.CreateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        
-        String userEmail = jwt.getClaimAsString("email"); 
+        String userEmail = jwt.getClaimAsString("email");
+        log.info("Game room creation requested by user: {}", userEmail);
         GameRoomDto.Response createdRoom = gameRoomService.createGameRoom(request, userEmail);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdRoom);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.success(createdRoom, "게임 방이 생성되었습니다."));
     }
 
     /**
      * 현재 생성된 모든 게임 로비 목록을 조회하는 API입니다.
      */
     @GetMapping
-    public ResponseEntity<List<GameRoomDto.Response>> getAllGameRooms() {
+    public ResponseEntity<ApiResponse<List<GameRoomDto.Response>>> getAllGameRooms() {
+        log.info("Game rooms list requested");
         List<GameRoomDto.Response> allRooms = gameRoomService.getAllGameRooms();
-        return ResponseEntity.ok(allRooms);
+        return ResponseEntity.ok(ApiResponse.success(allRooms));
     }
 
     /**
@@ -49,22 +54,23 @@ public class GameRoomController {
      * @return 작업 완료 후 HTTP 상태 코드 200 (OK)
      */
     @PostMapping("/{roomCode}/team-composition")
-    public ResponseEntity<Void> startTeamComposition(
+    public ResponseEntity<ApiResponse<Void>> startTeamComposition(
             @PathVariable String roomCode,
             @Valid @RequestBody GameRoomDto.StartTeamCompositionRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        
         String userEmail = jwt.getClaimAsString("email");
+        log.info("Team composition start requested for room: {} by user: {}", roomCode, userEmail);
         gameRoomService.startTeamComposition(roomCode, request, userEmail);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(ApiResponse.success("팀 구성이 시작되었습니다."));
     }
     @PostMapping("/{roomCode}/join")
-    public ResponseEntity<Void> joinGameRoom(
+    public ResponseEntity<ApiResponse<Void>> joinGameRoom(
             @PathVariable String roomCode,
             @AuthenticationPrincipal Jwt jwt) {
         String userEmail = jwt.getClaimAsString("email");
+        log.info("User {} attempting to join room: {}", userEmail, roomCode);
         gameRoomService.joinGameRoom(roomCode, userEmail);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(ApiResponse.success("게임 방에 참여하셨습니다."));
     }
 
     /**
@@ -73,9 +79,9 @@ public class GameRoomController {
      * @return GameRoomDto.Response
      */
     @GetMapping("/{roomCode}")
-    public ResponseEntity<GameRoomDto.Response> getGameRoomDetails(@PathVariable String roomCode) {
-        // GameRoomService에 roomCode로 방을 찾는 메서드를 구현해야 합니다.
+    public ResponseEntity<ApiResponse<GameRoomDto.Response>> getGameRoomDetails(@PathVariable String roomCode) {
+        log.info("Game room details requested for: {}", roomCode);
         GameRoomDto.Response roomDetails = gameRoomService.getGameRoomByCode(roomCode);
-        return ResponseEntity.ok(roomDetails);
+        return ResponseEntity.ok(ApiResponse.success(roomDetails));
     }
 }

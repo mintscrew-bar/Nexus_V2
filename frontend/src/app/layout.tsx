@@ -1,21 +1,15 @@
 // frontend/src/app/layout.tsx
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+// 1. next/font/google에서 Inter 폰트를 가져옵니다.
+import { Inter } from "next/font/google";
 import "./globals.scss";
 import AppLayout from "@/components/layout/AppLayout";
 import ThemeRegistry from "@/components/ThemeRegistry/ThemeRegistry";
-import React from "react"; // 1. ThemeRegistry import
+import React from "react";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
-    subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
-    subsets: ["latin"],
-});
+// 2. Geist 폰트 설정을 Inter 폰트 설정으로 변경합니다.
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
     title: "Nexus - LoL Custom Platform",
@@ -23,14 +17,14 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
-                                       children,
-                                   }: Readonly<{
+    children,
+}: Readonly<{
     children: React.ReactNode;
 }>) {
     return (
         <html lang="ko">
-        <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {/* 2. <ThemeRegistry>로 AppLayout을 감싸줍니다. */}
+        {/* 3. body의 className을 Inter 폰트로 변경합니다. */}
+        <body className={inter.className}>
         <ThemeRegistry>
             <AppLayout>{children}</AppLayout>
         </ThemeRegistry>

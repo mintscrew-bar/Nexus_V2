@@ -29,14 +29,24 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
-    // Keycloak 연동을 위한 필수 의존성
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // JWT for local authentication
+    implementation 'org.springframework.security:spring-security-oauth2-jose'
+
+    // OAuth2 Client for social login
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // Email
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 
     // Database
     runtimeOnly 'org.postgresql:postgresql'
 
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Rate Limiting
+    implementation 'com.github.vladimir-bukhtoyarov:bucket4j-core:7.6.0'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
